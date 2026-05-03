@@ -1,0 +1,11 @@
+node_modules
+dist
+.DS_Store
+*.vsix
+.claude
+.vscode
+.wrangler
+.dev.vars
+.clj-kondo
+.lsp
+.devcontainer

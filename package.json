@@ -1,0 +1,51 @@
+{
+  "name": "lowlight",
+  "displayName": "LowLight",
+  "description": "Dims non-selected text so your selection visually pops — great for screencasts, pair programming, and focused reading.",
+  "version": "0.1.0",
+  "publisher": "lowlight",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["highlight", "focus", "screencast", "selection", "dim"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lowlight.toggle",
+        "title": "Toggle",
+        "category": "LowLight"
+      }
+    ],
+    "configuration": {
+      "title": "LowLight",
+      "properties": {
+        "lowlight.opacity": {
+          "type": "string",
+          "default": "0.15",
+          "pattern": "^(0(\\.\\d+)?|1(\\.0+)?)$",
+          "markdownDescription": "Opacity of dimmed (non-selected) text. Must be a string representing a number between `0` and `1` (e.g. `\"0.15\"`)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "package": "npm run compile -- --minify && vsce package",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "esbuild": "^0.21.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^2.26.0"
+  }
+}
