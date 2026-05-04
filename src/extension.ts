@@ -89,6 +89,10 @@ function applyToggle(editor: vscode.TextEditor): void {
     editor.setDecorations(decorationType, dim);
     editor.setDecorations(selectionDecorationType, selection);
     state.set(key, { dim, selection });
+    // Collapse the live selection so the editor stops painting its selection
+    // background — the dimmed surroundings are what mark the region now.
+    // Anchor at end so the cursor sits where the user finished selecting.
+    editor.selections = editor.selections.map((s) => new vscode.Selection(s.active, s.active));
   }
   // No selection + no active lowlight → do nothing.
 
