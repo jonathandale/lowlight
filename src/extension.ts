@@ -4,9 +4,11 @@ import * as vscode from "vscode";
 // can create multiple TextEditor objects for the same document (e.g. split
 // panes), and a Map<TextEditor, …> would silently create duplicate entries that
 // never get cleaned up when those transient editor objects are GC'd.
-type EditorState = Map<string, vscode.Range[]>;
+type EditorRanges = { dim: vscode.Range[]; selection: vscode.Range[] };
+type EditorState = Map<string, EditorRanges>;
 
 let decorationType: vscode.TextEditorDecorationType | null = null;
+let selectionDecorationType: vscode.TextEditorDecorationType | null = null;
 const state: EditorState = new Map();
 let statusBarItem: vscode.StatusBarItem | null = null;
 
@@ -19,6 +21,15 @@ function getOpacity(): string {
 function createDecorationType(): vscode.TextEditorDecorationType {
   return vscode.window.createTextEditorDecorationType({
     opacity: getOpacity(),
+  });
+}
+
+// Painted over the selected ranges to mask VS Code's built-in selection
+// highlight — the dimming of surrounding text already makes the selection pop,
+// so the blue background just adds noise.
+function createSelectionDecorationType(): vscode.TextEditorDecorationType {
+  return vscode.window.createTextEditorDecorationType({
+    backgroundColor: "transparent",
   });
 }
 
@@ -61,7 +72,7 @@ function buildComplementRanges(document: vscode.TextDocument, selections: readon
 }
 
 function applyToggle(editor: vscode.TextEditor): void {
-  if (!decorationType) return;
+  if (!decorationType || !selectionDecorationType) return;
 
   const key = editor.document.uri.toString();
   const hasLowlight = state.has(key);
@@ -70,11 +81,14 @@ function applyToggle(editor: vscode.TextEditor): void {
   if (hasLowlight) {
     // Clear regardless of whether there's a selection.
     editor.setDecorations(decorationType, []);
+    editor.setDecorations(selectionDecorationType, []);
     state.delete(key);
   } else if (hasSelection) {
-    const ranges = buildComplementRanges(editor.document, editor.selections);
-    editor.setDecorations(decorationType, ranges);
-    state.set(key, ranges);
+    const dim = buildComplementRanges(editor.document, editor.selections);
+    const selection = editor.selections.filter((s) => !s.isEmpty).map((s) => new vscode.Range(s.start, s.end));
+    editor.setDecorations(decorationType, dim);
+    editor.setDecorations(selectionDecorationType, selection);
+    state.set(key, { dim, selection });
   }
   // No selection + no active lowlight → do nothing.
 
@@ -83,6 +97,7 @@ function applyToggle(editor: vscode.TextEditor): void {
 
 export function activate(context: vscode.ExtensionContext): void {
   decorationType = createDecorationType();
+  selectionDecorationType = createSelectionDecorationType();
 
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = "lowlight.toggle";
@@ -109,7 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const key = editor.document.uri.toString();
       const ranges = state.get(key);
       if (ranges && decorationType) {
-        editor.setDecorations(decorationType, ranges);
+        editor.setDecorations(decorationType, ranges.dim);
       }
     }
   });
@@ -122,10 +137,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // When switching editors: reapply decorations (lost when editor is hidden)
   // and update the status bar to reflect the newly active editor's state.
   const activeEditorWatcher = vscode.window.onDidChangeActiveTextEditor((editor) => {
-    if (editor && decorationType) {
+    if (editor && decorationType && selectionDecorationType) {
       const ranges = state.get(editor.document.uri.toString());
       if (ranges) {
-        editor.setDecorations(decorationType, ranges);
+        editor.setDecorations(decorationType, ranges.dim);
+        editor.setDecorations(selectionDecorationType, ranges.selection);
       }
     }
     updateStatusBar(editor);
@@ -137,6 +153,8 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   decorationType?.dispose();
   decorationType = null;
+  selectionDecorationType?.dispose();
+  selectionDecorationType = null;
   statusBarItem?.dispose();
   statusBarItem = null;
   state.clear();
