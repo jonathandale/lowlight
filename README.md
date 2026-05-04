@@ -1,6 +1,6 @@
 # LowLight
 
-Dims non-selected text so your selection visually pops. Great for screencasts, pair programming, and focused reading.
+A VSCode extension that dims non-selected text so your selection visually pops. Great for screencasts, pair programming, and focused reading.
 
 ## How it works
 
